@@ -24,47 +24,75 @@ const Auth = () => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         // Redirect authenticated users based on their role
-        if (session?.user) {
-          setTimeout(async () => {
+        if (session?.user && event === 'SIGNED_IN') {
+          try {
             // Check user profile to determine role
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
               .from('profiles')
               .select('role')
               .eq('user_id', session.user.id)
               .single();
             
+            console.log('Profile data:', profile, 'Error:', error);
+            
+            if (error) {
+              console.error('Error fetching profile:', error);
+              navigate('/');
+              return;
+            }
+            
             if (profile?.role === 'admin') {
+              console.log('Redirecting to dashboard for admin');
               navigate('/dashboard');
             } else {
+              console.log('Redirecting to home for customer');
               navigate('/');
             }
-          }, 0);
+          } catch (error) {
+            console.error('Error in auth state change:', error);
+            navigate('/');
+          }
         }
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Existing session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        // Check user profile to determine role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (profile?.role === 'admin') {
-          navigate('/dashboard');
-        } else {
-          navigate('/');
+        try {
+          // Check user profile to determine role
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          console.log('Existing session profile:', profile, 'Error:', error);
+          
+          if (error) {
+            console.error('Error fetching existing session profile:', error);
+            return;
+          }
+          
+          if (profile?.role === 'admin') {
+            console.log('Existing session - redirecting to dashboard');
+            navigate('/dashboard');
+          } else {
+            console.log('Existing session - redirecting to home');
+            navigate('/');
+          }
+        } catch (error) {
+          console.error('Error in existing session check:', error);
         }
       }
     });
@@ -88,6 +116,8 @@ const Auth = () => {
         title: "Success",
         description: "Signed in successfully"
       });
+      
+      // The redirect will be handled by the auth state change listener
     } catch (error: any) {
       toast({
         title: "Error",
