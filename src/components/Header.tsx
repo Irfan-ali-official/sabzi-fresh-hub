@@ -1,4 +1,4 @@
-import { ShoppingCart, Search, Menu } from "lucide-react";
+import { ShoppingCart, Search, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,8 +36,17 @@ const Header = ({ cartItemCount, onCartClick, searchTerm, onSearchChange }: Head
             </div>
           </div>
 
-          {/* Cart Button */}
+          {/* Sign In & Cart Buttons */}
           <div className="flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => window.location.href = '/auth'}
+              className="text-fresh-green hover:bg-fresh-bg"
+            >
+              <User className="h-4 w-4 mr-2" />
+              Sign In
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 

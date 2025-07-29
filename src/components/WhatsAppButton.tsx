@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 const WhatsAppButton = () => {
   const handleWhatsAppClick = () => {
-    const phoneNumber = "+923001234567"; // Replace with actual WhatsApp business number
+    const phoneNumber = "+923337141423"; // SABZI MART WhatsApp business number
     const message = "Hello! I need help with my order from SABZI MART.";
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

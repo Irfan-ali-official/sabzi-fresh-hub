@@ -52,7 +52,7 @@ const Hero = ({ onShopNowClick }: HeroProps) => {
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2 mx-auto">
             <span className="text-2xl">🚚</span>
           </div>
-          <p className="text-sm font-medium">Free Delivery</p>
+          <p className="text-sm font-medium">Low Delivery Fee</p>
         </div>
         <div className="text-center">
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2 mx-auto">

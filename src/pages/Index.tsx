@@ -176,8 +176,8 @@ const Index = () => {
                 <div className="w-16 h-16 bg-fresh-green rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-3xl">🚚</span>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Free Delivery</h3>
-                <p className="text-muted-foreground">Free delivery on all orders within the city</p>
+                <h3 className="text-xl font-semibold mb-2">Low Delivery Fee</h3>
+                <p className="text-muted-foreground">Minimal delivery charges for all orders</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-fresh-green rounded-full flex items-center justify-center mx-auto mb-4">
