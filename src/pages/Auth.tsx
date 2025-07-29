@@ -31,31 +31,46 @@ const Auth = () => {
         
         // Redirect authenticated users based on their role
         if (session?.user && event === 'SIGNED_IN') {
+          // Set loading to false since we successfully signed in
+          setIsLoading(false);
+          
           try {
-            // Check user profile to determine role
-            const { data: profile, error } = await supabase
+            console.log('Looking up profile for user:', session.user.id);
+            
+            // Check user profile to determine role with timeout
+            const profilePromise = supabase
               .from('profiles')
               .select('role')
               .eq('user_id', session.user.id)
               .single();
             
-            console.log('Profile data:', profile, 'Error:', error);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Profile lookup timeout')), 5000)
+            );
+            
+            const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+            
+            console.log('Profile lookup result:', { profile, error });
             
             if (error) {
-              console.error('Error fetching profile:', error);
+              console.error('Profile lookup error:', error);
+              // Default to customer if profile lookup fails
+              console.log('Defaulting to customer redirect due to profile error');
               navigate('/');
               return;
             }
             
             if (profile?.role === 'admin') {
-              console.log('Redirecting to dashboard for admin');
+              console.log('Admin detected - redirecting to dashboard');
               navigate('/dashboard');
             } else {
-              console.log('Redirecting to home for customer');
+              console.log('Customer detected - redirecting to home');
               navigate('/');
             }
           } catch (error) {
-            console.error('Error in auth state change:', error);
+            console.error('Critical error in auth state change:', error);
+            setIsLoading(false);
+            // Fallback to home page
             navigate('/');
           }
         }
@@ -105,6 +120,7 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
+      console.log('Starting sign in process for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -112,20 +128,23 @@ const Auth = () => {
 
       if (error) throw error;
 
+      console.log('Sign in successful, auth state change should handle redirect');
+      
       toast({
         title: "Success",
         description: "Signed in successfully"
       });
       
       // The redirect will be handled by the auth state change listener
+      // Keep loading state active until redirect happens
     } catch (error: any) {
+      console.error('Sign in error:', error);
+      setIsLoading(false); // Only stop loading on error
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
