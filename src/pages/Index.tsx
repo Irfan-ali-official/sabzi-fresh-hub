@@ -140,6 +140,51 @@ const Index = () => {
         )}
       </main>
 
+      {/* Features Section */}
+      <section className="py-16 bg-fresh-bg/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Why Choose SABZI MART?
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-fresh-green rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🚚</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Low Delivery Fee</h3>
+              <p className="text-muted-foreground">Minimal delivery charges for all orders</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-fresh-green rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🌱</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Farm Fresh</h3>
+              <p className="text-muted-foreground">Directly sourced from local farms</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-fresh-green rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">✅</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Quality Guaranteed</h3>
+              <p className="text-muted-foreground">100% satisfaction guaranteed or money back</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-fresh-green-dark text-white py-8">
+        <div className="container mx-auto px-4 text-center">
+          <h3 className="text-2xl font-bold mb-2">SABZI MART</h3>
+          <p className="text-fresh-bg/80 mb-4">Fresh fruits & vegetables delivered to your doorstep</p>
+          <p className="text-sm text-fresh-bg/60">
+            © 2025 SABZI MART. All rights reserved.
+          </p>
+        </div>
+      </footer>
+
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
