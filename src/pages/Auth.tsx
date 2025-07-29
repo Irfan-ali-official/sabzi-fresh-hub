@@ -54,6 +54,28 @@ const Auth = () => {
             
             if (error) {
               console.error('Profile lookup error:', error);
+              // If it's the admin email, ensure they get admin role
+              if (session.user.email === 'irfan.ali.official3@gmail.com') {
+                console.log('Creating admin profile for:', session.user.email);
+                try {
+                  const { error: insertError } = await supabase
+                    .from('profiles')
+                    .insert({
+                      user_id: session.user.id,
+                      email: session.user.email,
+                      full_name: session.user.user_metadata?.full_name || 'Admin User',
+                      role: 'admin'
+                    });
+                  
+                  if (!insertError) {
+                    console.log('Admin profile created, redirecting to dashboard');
+                    navigate('/dashboard');
+                    return;
+                  }
+                } catch (createError) {
+                  console.error('Error creating admin profile:', createError);
+                }
+              }
               // Default to customer if profile lookup fails
               console.log('Defaulting to customer redirect due to profile error');
               navigate('/');
