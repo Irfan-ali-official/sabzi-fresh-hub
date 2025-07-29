@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,14 +8,69 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import logoFresh from "@/assets/sabzi-mart-logo-fresh.png";
+import { User, Session } from '@supabase/supabase-js';
 
 const Auth = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Redirect authenticated users based on their role
+        if (session?.user) {
+          setTimeout(async () => {
+            // Check user profile to determine role
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .single();
+            
+            if (profile?.role === 'admin') {
+              navigate('/dashboard');
+            } else {
+              navigate('/');
+            }
+          }, 0);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Check user profile to determine role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (profile?.role === 'admin') {
+          navigate('/dashboard');
+        } else {
+          navigate('/');
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,13 +84,6 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Check if user is admin (you can implement role-based logic here)
-      if (email.includes('admin') || email === 'admin@sabzimart.com') {
-        window.location.href = '/dashboard';
-      } else {
-        window.location.href = '/';
-      }
-      
       toast({
         title: "Success",
         description: "Signed in successfully"
@@ -73,11 +122,6 @@ const Auth = () => {
         title: "Success",
         description: "Account created successfully! Please check your email to verify your account."
       });
-      
-      // Redirect to home page after successful signup
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -210,7 +254,7 @@ const Auth = () => {
             <div className="mt-6 text-center">
               <Button
                 variant="ghost"
-                onClick={() => window.location.href = '/'}
+                onClick={() => navigate('/')}
                 className="text-fresh-green hover:bg-fresh-bg"
               >
                 ← Back to Store

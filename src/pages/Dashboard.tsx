@@ -1,154 +1,210 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { LogOut, Plus, Edit2, Trash2, Package, ShoppingCart, TrendingUp } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { User } from '@supabase/supabase-js';
 
 interface Product {
   id: string;
   name: string;
   price: number;
+  unit: string;
   category: string;
-  image: string;
-  description?: string;
+  image: string | null;
+  description: string | null;
+  in_stock: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Order {
   id: string;
   customer_name: string;
+  customer_email: string;
   customer_phone: string;
-  customer_email?: string;
+  customer_address: string;
   total_amount: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: string;
   created_at: string;
-  items: any[];
+  items: any;
 }
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
-  // Product form state
-  const [productForm, setProductForm] = useState({
-    name: "",
-    price: "",
-    category: "",
-    image: "",
-    description: ""
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    unit: 'kg',
+    category: '',
+    image: '',
+    description: ''
   });
 
   useEffect(() => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = '/auth';
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth');
       return;
     }
-    setUser(session.user);
-    loadData();
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      navigate('/');
+      return;
+    }
+
+    setUser(user);
   };
 
   const loadData = async () => {
-    // Load products and orders from Supabase
-    // For now, using mock data until database is set up
-    setProducts([
-      { id: "1", name: "Fresh Apples", price: 250, category: "fruits", image: "/placeholder.svg", description: "Premium quality apples" },
-      { id: "2", name: "Organic Carrots", price: 180, category: "vegetables", image: "/placeholder.svg", description: "Fresh organic carrots" }
-    ]);
-    
-    setOrders([
-      { 
-        id: "1", 
-        customer_name: "John Doe", 
-        customer_phone: "03001234567", 
-        customer_email: "john@email.com",
-        total_amount: 850, 
-        status: "pending", 
-        created_at: new Date().toISOString(),
-        items: []
-      }
-    ]);
+    setIsLoading(true);
+    try {
+      // Load products
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (productsError) throw productsError;
+      setProducts(productsData || []);
+
+      // Load orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+      setOrders(ordersData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/auth';
+    navigate('/auth');
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
+    if (!newProduct.name || !newProduct.price || !newProduct.category) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      // TODO: Add to Supabase database
-      const newProduct = {
-        id: Date.now().toString(),
-        ...productForm,
-        price: parseFloat(productForm.price)
-      };
+      const { data, error } = await supabase
+        .from('products')
+        .insert([
+          {
+            name: newProduct.name,
+            price: parseFloat(newProduct.price),
+            unit: newProduct.unit,
+            category: newProduct.category,
+            image: newProduct.image || '/placeholder.svg',
+            description: newProduct.description || null
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProducts([data, ...products]);
+      setNewProduct({
+        name: '',
+        price: '',
+        unit: 'kg',
+        category: '',
+        image: '',
+        description: ''
+      });
       
-      setProducts([...products, newProduct]);
-      setProductForm({ name: "", price: "", category: "", image: "", description: "" });
-      toast({
-        title: "Success",
-        description: "Product added successfully"
-      });
+      toast.success('Product added successfully!');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add product",
-        variant: "destructive"
-      });
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
+    setIsLoading(true);
     try {
-      setProducts(products.filter(p => p.id !== id));
-      toast({
-        title: "Success",
-        description: "Product deleted successfully"
-      });
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setProducts(products.filter(product => product.id !== id));
+      toast.success('Product deleted successfully!');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive"
-      });
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    setIsLoading(true);
     try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus as any } : order
+        order.id === orderId 
+          ? { ...order, status: newStatus }
+          : order
       ));
-      toast({
-        title: "Success",
-        description: "Order status updated successfully"
-      });
+      toast.success('Order status updated successfully!');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive"
-      });
+      console.error('Error updating order status:', error);
+      toast.error('Failed to update order status');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,7 +234,6 @@ const Dashboard = () => {
               onClick={handleSignOut}
               className="border-fresh-green/20 hover:bg-fresh-bg"
             >
-              <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>
@@ -186,7 +241,7 @@ const Dashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="overview">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
@@ -196,35 +251,37 @@ const Dashboard = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
+                <CardHeader>
+                  <CardTitle>Total Products</CardTitle>
+                  <CardDescription>Active products in inventory</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{products.length}</div>
                 </CardContent>
               </Card>
+              
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                <CardHeader>
+                  <CardTitle>Pending Orders</CardTitle>
+                  <CardDescription>Orders awaiting processing</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {orders.filter(o => o.status === 'pending').length}
+                    {orders.filter(order => order.status === 'pending').length}
                   </div>
                 </CardContent>
               </Card>
+              
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <CardHeader>
+                  <CardTitle>Total Revenue</CardTitle>
+                  <CardDescription>This month</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    PKR {orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + o.total_amount, 0)}
+                    ₹{orders.filter(order => order.status === 'completed').reduce((sum, order) => sum + Number(order.total_amount), 0)}
                   </div>
                 </CardContent>
               </Card>
@@ -241,64 +298,83 @@ const Dashboard = () => {
               <CardContent>
                 <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="product-name">Product Name</Label>
+                    <Label htmlFor="name">Product Name</Label>
                     <Input
-                      id="product-name"
-                      value={productForm.name}
-                      onChange={(e) => setProductForm({...productForm, name: e.target.value})}
+                      id="name"
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
                       placeholder="Enter product name"
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="product-price">Price (PKR)</Label>
+                    <Label htmlFor="price">Price (₹)</Label>
                     <Input
-                      id="product-price"
+                      id="price"
                       type="number"
-                      value={productForm.price}
-                      onChange={(e) => setProductForm({...productForm, price: e.target.value})}
+                      step="0.01"
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
                       placeholder="Enter price"
                       required
                     />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="product-category">Category</Label>
-                    <Select value={productForm.category} onValueChange={(value) => setProductForm({...productForm, category: value})}>
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select value={newProduct.unit} onValueChange={(value) => setNewProduct({...newProduct, unit: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">Kilogram (kg)</SelectItem>
+                        <SelectItem value="bunch">Bunch</SelectItem>
+                        <SelectItem value="dozen">Dozen</SelectItem>
+                        <SelectItem value="piece">Piece</SelectItem>
+                        <SelectItem value="liter">Liter</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={newProduct.category} onValueChange={(value) => setNewProduct({...newProduct, category: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fruits">Fruits</SelectItem>
                         <SelectItem value="vegetables">Vegetables</SelectItem>
+                        <SelectItem value="fruits">Fruits</SelectItem>
+                        <SelectItem value="dairy">Dairy</SelectItem>
+                        <SelectItem value="grains">Grains</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="product-image">Image URL</Label>
+                    <Label htmlFor="image">Image URL</Label>
                     <Input
-                      id="product-image"
-                      value={productForm.image}
-                      onChange={(e) => setProductForm({...productForm, image: e.target.value})}
+                      id="image"
+                      value={newProduct.image}
+                      onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
                       placeholder="Enter image URL"
                     />
                   </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="product-description">Description</Label>
-                    <Input
-                      id="product-description"
-                      value={productForm.description}
-                      onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newProduct.description}
+                      onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                       placeholder="Enter product description"
                     />
                   </div>
+
                   <div className="md:col-span-2">
-                    <Button 
-                      type="submit" 
-                      className="bg-fresh-green hover:bg-fresh-green-dark"
-                      disabled={isLoading}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {isLoading ? "Adding..." : "Add Product"}
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Adding...' : 'Add Product'}
                     </Button>
                   </div>
                 </form>
@@ -315,32 +391,39 @@ const Dashboard = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Stock</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {products.map((product) => (
                       <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.name}</TableCell>
+                        <TableCell>₹{product.price}</TableCell>
+                        <TableCell>{product.unit}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            {product.category}
+                          <Badge variant="outline">{product.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.in_stock ? "default" : "destructive"}>
+                            {product.in_stock ? "In Stock" : "Out of Stock"}
                           </Badge>
                         </TableCell>
-                        <TableCell>PKR {product.price}</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm">
-                              <Edit2 className="h-4 w-4" />
+                              Edit
                             </Button>
                             <Button 
-                              variant="outline" 
+                              variant="destructive" 
                               size="sm"
                               onClick={() => handleDeleteProduct(product.id)}
+                              disabled={isLoading}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              Delete
                             </Button>
                           </div>
                         </TableCell>
@@ -365,8 +448,8 @@ const Dashboard = () => {
                     <TableRow>
                       <TableHead>Order ID</TableHead>
                       <TableHead>Customer</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Amount</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Total</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Actions</TableHead>
@@ -375,22 +458,31 @@ const Dashboard = () => {
                   <TableBody>
                     {orders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">#{order.id}</TableCell>
-                        <TableCell>{order.customer_name}</TableCell>
-                        <TableCell>{order.customer_phone}</TableCell>
-                        <TableCell>PKR {order.total_amount}</TableCell>
+                        <TableCell>#{order.id.slice(0, 8)}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{order.customer_name}</div>
+                            <div className="text-sm text-muted-foreground">{order.customer_email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{order.customer_phone}</div>
+                            <div className="text-muted-foreground">{order.customer_address}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{order.total_amount}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(order.status)}>
                             {order.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </TableCell>
+                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Select
                             value={order.status}
                             onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
+                            disabled={isLoading}
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />
@@ -412,52 +504,51 @@ const Dashboard = () => {
 
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Reports</CardTitle>
-                <CardDescription>View sales analytics and trends</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Daily Sales Summary</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Today's Orders:</span>
-                        <span className="font-medium">{orders.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Today's Revenue:</span>
-                        <span className="font-medium">PKR {orders.reduce((sum, o) => sum + o.total_amount, 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Average Order Value:</span>
-                        <span className="font-medium">
-                          PKR {orders.length > 0 ? Math.round(orders.reduce((sum, o) => sum + o.total_amount, 0) / orders.length) : 0}
-                        </span>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daily Sales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Today</span>
+                      <span>₹{orders.filter(order => new Date(order.created_at).toDateString() === new Date().toDateString() && order.status === 'completed').reduce((sum, order) => sum + Number(order.total_amount), 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Week</span>
+                      <span>₹{orders.filter(order => order.status === 'completed').reduce((sum, order) => sum + Number(order.total_amount), 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Orders</span>
+                      <span>{orders.length}</span>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Order Status Breakdown</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Pending:</span>
-                        <span className="font-medium">{orders.filter(o => o.status === 'pending').length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Completed:</span>
-                        <span className="font-medium">{orders.filter(o => o.status === 'completed').length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Cancelled:</span>
-                        <span className="font-medium">{orders.filter(o => o.status === 'cancelled').length}</span>
-                      </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Status Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Pending</span>
+                      <Badge variant="secondary">{orders.filter(order => order.status === 'pending').length}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Completed</span>
+                      <Badge variant="default">{orders.filter(order => order.status === 'completed').length}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cancelled</span>
+                      <Badge variant="destructive">{orders.filter(order => order.status === 'cancelled').length}</Badge>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
