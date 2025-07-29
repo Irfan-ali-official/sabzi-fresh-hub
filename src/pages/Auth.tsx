@@ -93,7 +93,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/src/assets/sabzi-mart-logo-fresh.png" 
+            src="src/assets/sabzi-mart-logo-fresh.png" 
             alt="SABZI MART Logo" 
             className="w-16 h-16 object-contain mx-auto mb-4"
           />

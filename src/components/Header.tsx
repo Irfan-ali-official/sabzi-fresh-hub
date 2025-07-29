@@ -18,7 +18,7 @@ const Header = ({ cartItemCount, onCartClick, searchTerm, onSearchChange }: Head
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <img 
-              src="/src/assets/sabzi-mart-logo-fresh.png" 
+              src="src/assets/sabzi-mart-logo-fresh.png" 
               alt="SABZI MART Logo" 
               className="w-10 h-10 object-contain"
             />
