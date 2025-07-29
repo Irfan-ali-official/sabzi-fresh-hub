@@ -1,34 +1,102 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const { toast } = useToast();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // TODO: Implement Supabase authentication
-    setTimeout(() => setIsLoading(false), 1000);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Check if user is admin (you can implement role-based logic here)
+      if (email.includes('admin') || email === 'admin@sabzimart.com') {
+        window.location.href = '/dashboard';
+      } else {
+        window.location.href = '/';
+      }
+      
+      toast({
+        title: "Success",
+        description: "Signed in successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // TODO: Implement Supabase authentication
-    setTimeout(() => setIsLoading(false), 1000);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: name,
+            phone: phone
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Account created successfully! Please check your email to verify your account."
+      });
+      
+      // Redirect to home page after successful signup
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-fresh-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-fresh-green to-fresh-green-light rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">S</span>
-          </div>
+          <img 
+            src="/src/assets/sabzi-mart-logo.png" 
+            alt="SABZI MART Logo" 
+            className="w-16 h-16 object-contain mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-fresh-green">SABZI MART</h1>
           <p className="text-muted-foreground mt-2">Your fresh grocery partner</p>
         </div>
@@ -55,6 +123,8 @@ const Auth = () => {
                       id="email"
                       type="email"
                       placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -64,6 +134,8 @@ const Auth = () => {
                       id="password"
                       type="password"
                       placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                     />
                   </div>
@@ -85,6 +157,8 @@ const Auth = () => {
                       id="name"
                       type="text"
                       placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       required
                     />
                   </div>
@@ -94,6 +168,8 @@ const Auth = () => {
                       id="signup-email"
                       type="email"
                       placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -103,6 +179,8 @@ const Auth = () => {
                       id="phone"
                       type="tel"
                       placeholder="Enter your phone number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       required
                     />
                   </div>
@@ -112,6 +190,8 @@ const Auth = () => {
                       id="signup-password"
                       type="password"
                       placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                     />
                   </div>
