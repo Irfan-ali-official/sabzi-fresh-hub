@@ -2,7 +2,6 @@ import { ShoppingCart, Search, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import logoFresh from "@/assets/sabzi-mart-logo-fresh.png";
 
 interface HeaderProps {
   cartItemCount: number;
@@ -19,7 +18,7 @@ const Header = ({ cartItemCount, onCartClick, searchTerm, onSearchChange }: Head
           {/* Logo */}
           <div className="flex items-center space-x-3">
             <img 
-              src={logoFresh} 
+              src="/src/assets/sabzi-mart-logo-fresh.png" 
               alt="SABZI MART Logo" 
               className="w-10 h-10 object-contain"
             />

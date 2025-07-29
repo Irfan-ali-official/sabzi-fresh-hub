@@ -38,7 +38,7 @@ const Hero = ({ onShopNowClick }: HeroProps) => {
             <Button 
               variant="outline"
               size="lg"
-              className="border-white bg-white/10 text-white hover:bg-white hover:text-fresh-green-dark font-semibold px-8 py-3 text-lg backdrop-blur-sm"
+              className="border-white text-white hover:bg-white hover:text-fresh-green-dark font-semibold px-8 py-3 text-lg"
             >
               Learn More
             </Button>
