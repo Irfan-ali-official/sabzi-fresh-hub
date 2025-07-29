@@ -204,7 +204,7 @@ const Index = () => {
           <h3 className="text-2xl font-bold mb-2">SABZI MART</h3>
           <p className="text-fresh-bg/80 mb-4">Fresh fruits & vegetables delivered to your doorstep</p>
           <p className="text-sm text-fresh-bg/60">
-            © 2024 SABZI MART. All rights reserved.
+            © 2025 SABZI MART. All rights reserved.
           </p>
         </div>
       </footer>
